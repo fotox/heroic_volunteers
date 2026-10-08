@@ -1,0 +1,30 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Helferhelden",
+        "description": "Set up the chore game for kids. Then add the \"Helferhelden\" card to a dashboard."
+      }
+    },
+    "abort": { "single_instance_allowed": "Helferhelden is already set up." }
+  },
+  "services": {
+    "complete_chore": {
+      "name": "Complete chore",
+      "description": "Marks a chore as done for a child (e.g. via NFC tag or button).",
+      "fields": {
+        "child": { "name": "Child", "description": "Child name or ID" },
+        "chore": { "name": "Chore", "description": "Chore title or ID" }
+      }
+    },
+    "add_stars": {
+      "name": "Add stars",
+      "description": "Gives a child stars (negative to remove).",
+      "fields": {
+        "child": { "name": "Child", "description": "Child name or ID" },
+        "amount": { "name": "Amount", "description": "Number of stars" },
+        "reason": { "name": "Reason", "description": "Optional reason" }
+      }
+    }
+  }
+}

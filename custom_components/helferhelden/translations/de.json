@@ -1,0 +1,30 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Helferhelden",
+        "description": "Aufgaben-Spiel für Kinder einrichten. Danach die Karte \"Helferhelden\" zu einem Dashboard hinzufügen."
+      }
+    },
+    "abort": { "single_instance_allowed": "Helferhelden ist bereits eingerichtet." }
+  },
+  "services": {
+    "complete_chore": {
+      "name": "Aufgabe erledigen",
+      "description": "Markiert eine Aufgabe für ein Kind als erledigt (z. B. per NFC-Tag oder Taster).",
+      "fields": {
+        "child": { "name": "Kind", "description": "Name oder ID des Kindes" },
+        "chore": { "name": "Aufgabe", "description": "Titel oder ID der Aufgabe" }
+      }
+    },
+    "add_stars": {
+      "name": "Sterne vergeben",
+      "description": "Gibt einem Kind Sterne (negativ zum Abziehen).",
+      "fields": {
+        "child": { "name": "Kind", "description": "Name oder ID des Kindes" },
+        "amount": { "name": "Anzahl", "description": "Anzahl Sterne" },
+        "reason": { "name": "Grund", "description": "Optionaler Grund" }
+      }
+    }
+  }
+}

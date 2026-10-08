@@ -1,0 +1,28 @@
+complete_chore:
+  fields:
+    child:
+      required: true
+      selector:
+        text:
+    chore:
+      required: true
+      selector:
+        text:
+add_stars:
+  fields:
+    child:
+      required: true
+      selector:
+        text:
+    amount:
+      required: true
+      selector:
+        number:
+          # Must match MAX_ADJUST in model.py and the voluptuous range in __init__.py.
+          # A narrower selector would only hide what the service actually accepts.
+          min: -1000
+          max: 1000
+          mode: box
+    reason:
+      selector:
+        text:
