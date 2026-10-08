@@ -191,57 +191,6 @@ Helferhelden relies on Home Assistant for authentication. Within that, it separa
 
 **Forgotten PIN.** There is no reset in the card, and administrators need the PIN too once it is set. Stop Home Assistant, set `"pin": null` in `/config/.storage/helferhelden`, and start it again; then set a new PIN as an administrator.
 
-## Development
-
-```bash
-pip install pytest-homeassistant-custom-component home-assistant-frontend
-pytest            # game rules and integration against a real Home Assistant
-```
-
-Coverage is enforced at 80 %. CI additionally runs `ruff`, `hassfest` and the HACS validation.
-
-### Release handover
-
-`python3 .claude/release-export.py` copies the publishable payload — the integration,
-`hacs.json`, `README.md` and `LICENSE` — into `../ha_heroic_volunteers`, leaving behind the
-workflow files, hooks, tests, demo harness and every local cache. The payload is an allowlist,
-so a file added to the repository later stays out of a release until it is named there.
-
-The script refuses to delete anything in the target it did not put there, leaves a `.git`
-directory in the target alone, and verifies the result: no excluded directory, no cache, valid
-HACS metadata, a version matching the source, and every relative README link resolving. Use
-`--dry-run` to see the plan first.
-
-### Secret scanning
-
-CI scans every push and pull request for credentials with
-[gitleaks](https://github.com/gitleaks/gitleaks), over the full history and the working tree.
-The same check runs locally as a pre-commit hook; enable it once per clone:
-
-```bash
-brew install gitleaks          # or see the gitleaks releases page
-git config core.hooksPath .githooks
-```
-
-Without gitleaks installed the hook skips the scan and says so — CI still catches it, so
-nothing reaches the remote unchecked.
-
-`node tests/check_card.mjs` evaluates the card with DOM stubs and verifies the translation
-layer: that every `tr("…")` has an English entry, that German output is unchanged, that the
-backend's German messages are all translatable, and that the version in `manifest.json`,
-`const.py` and the card agree.
-
-`demo/index.html` opens the card with a simulated Home Assistant in the browser — no Home
-Assistant needed. Append `?lang=en` to see the English wording.
-
-### Adding a language
-
-The card uses the German source string as its lookup key, so `tr()` returns its argument
-unchanged for German. To add a language, copy the `EN` table in `helferhelden-card.js`, translate
-the values and extend `setLang`. A key missing from a table falls back to German rather than
-rendering empty.
-
-Fonts: Baloo 2 and Nunito, SIL Open Font License (see `frontend/fonts`).
 
 ## License
 
