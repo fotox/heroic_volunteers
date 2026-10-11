@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="30 31 452 452" width="512" height="512">
+  <title>Helferhelden</title>
+  <desc>A hero crest with a star, in the colours of the Helferhelden card.</desc>
+  <g stroke="#2e2a5c" stroke-width="26" stroke-linejoin="round">
+    <path d="M 256 44 C 196 78, 136 92, 86 92 L 86 262 C 86 372, 166 436, 256 470 C 346 436, 426 372, 426 262 L 426 92 C 376 92, 316 78, 256 44 Z" fill="#ff5d8f"/>
+    <path d="M 256.0 126.0 L 287.2 209.1 L 375.8 213.1 L 306.4 268.4 L 330.1 353.9 L 256.0 305.0 L 181.9 353.9 L 205.6 268.4 L 136.2 213.1 L 224.8 209.1 Z" fill="#ffc93c" stroke-width="22"/>
+  </g>
+</svg>

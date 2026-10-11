@@ -26,6 +26,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CARD_ES5_URL,
     CARD_URL,
     DOMAIN,
     EVENT_PREFIX,
@@ -303,10 +304,18 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     await hass.http.async_register_static_paths(
         [
             StaticPathConfig(CARD_URL, str(frontend_dir / "helferhelden-card.js"), False),
+            StaticPathConfig(CARD_ES5_URL, str(frontend_dir / "helferhelden-card.es5.js"), False),
             StaticPathConfig(FONTS_URL, str(frontend_dir / "fonts"), True),
         ]
     )
+    # Registering only the module URL leaves the card out of the legacy frontend build
+    # entirely: that branch of index.html stays empty and the browser reports
+    # "Custom element doesn't exist". Every Android WebView below version 130 gets that
+    # build, however modern it otherwise is. A browser only ever runs one of the two
+    # branches, and the card guards its own customElements.define in case it ever runs
+    # both.
     frontend.add_extra_js_url(hass, f"{CARD_URL}?v={VERSION}")
+    frontend.add_extra_js_url(hass, f"{CARD_ES5_URL}?v={VERSION}", es5=True)
     return True
 
 

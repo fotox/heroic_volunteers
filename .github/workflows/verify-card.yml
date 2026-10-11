@@ -1,0 +1,33 @@
+# Lives in the development repository at .claude/publish/verify-card.yml and is
+# copied here by its release export. Edits made here are overwritten by the next
+# release.
+#
+# Why this exists: helferhelden-card.es5.js is generated, and this repository is the
+# one people read. Without a check, the generated file could fall behind the source
+# it claims to be built from and nothing would say so -- the card would keep working
+# on modern browsers and quietly rot on the old tablets the file exists for.
+name: Verify the bundled card
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  card:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: The legacy build matches its source, byte for byte
+        # Rebuilds with the pinned esbuild and compares. A mismatch means somebody
+        # edited one of the two card files without rebuilding the other.
+        run: scripts/build-card-es5.sh --check
+      - name: Both card files parse
+        # A syntax error in either one stops the whole file from running, and then
+        # the custom element never exists.
+        run: |
+          node --check custom_components/helferhelden/frontend/helferhelden-card.js
+          node --check custom_components/helferhelden/frontend/helferhelden-card.es5.js

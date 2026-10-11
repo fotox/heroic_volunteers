@@ -7,9 +7,6 @@ Every child has a pet in their own world (space, jungle, ocean, dinos, fairy for
 The interface follows your Home Assistant language: German for `de*`, English for everything
 else. Documentation, code and log messages are English.
 
-<!-- Screenshots go here: start screen, a child's world, the parents' area.
-     Take them on the target device so the emoji match what users will see. -->
-
 ## What's inside
 
 **For the kids**
@@ -44,7 +41,8 @@ The integration makes no outbound requests of its own: no cloud, no telemetry, a
 
 ## Installation
 
-Requires Home Assistant 2024.7 or newer.
+Requires Home Assistant 2024.7 or newer. What changed in each version is in
+[`CHANGELOG.md`](CHANGELOG.md).
 
 **Via HACS:** add this repository as a custom repository of type *Integration*, then install it.
 
@@ -78,6 +76,20 @@ Card options:
 | `height` | `calc(100vh - 64px)` | Height of the card; in a sections view use something like `700px` |
 
 Tips for a wall tablet: Fully Kiosk Browser in kiosk mode, screen timeout off, and allow automatic media playback under "Web Content Settings".
+
+## Older tablets
+
+Home Assistant ships two frontend builds and picks one from the browser's user agent. Anything
+below Chrome or Android WebView 130 gets the legacy build, which loads custom cards as classic
+scripts rather than as modules. The card is registered for both builds, so it appears either way.
+
+If a tablet still shows `Custom element doesn't exist: helferhelden-card`, update the Android
+System WebView from the Play Store and reload with a cleared cache.
+
+The usable floor is around Chrome 84. Below that the card loads and works, but the spacing between
+the chore stickers collapses: it comes from `gap` in flex containers, which Chrome learnt in
+version 84 and which no build step can supply. Everything else — the stacked layout for portrait
+screens, the square pet nest, keyboard focus rings — has a fallback that reaches back to Chrome 61.
 
 ## Voice
 

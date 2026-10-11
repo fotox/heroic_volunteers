@@ -3,7 +3,7 @@
  * Vanilla web component, no build step. Talks to the helferhelden integration
  * via the HA websocket (helferhelden/subscribe + helferhelden/action).
  */
-const HH_VERSION = "1.3.0";
+const HH_VERSION = "0.1.1";
 
 // Fonts ship with the integration (no Google Fonts request from the kids' tablet).
 const DEFAULT_FONT_BASE = "/helferhelden/fonts/";
@@ -441,6 +441,11 @@ class Voice {
 }
 
 /* ------------------------------------------------------------------ styles */
+// Width at which the card switches to the stacked layout, in CSS pixels. It used
+// to live in an `@container` query; _watchWidth() now applies it as a class, so
+// the breakpoint has to agree with the `.root.narrow` rules below.
+const NARROW_AT = 900;
+
 const STYLES = `
 :host {
   --ink: #2e2a5c;
@@ -455,15 +460,23 @@ const STYLES = `
 }
 * { box-sizing: border-box; }
 button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* Chrome below 86 drops both :focus-visible rules -- an unknown pseudo-class
+   invalidates the whole selector -- and keeps the plain :focus ring. Newer browsers
+   apply all three and so show the ring for keyboard focus only. */
+button:focus, input:focus, select:focus { outline: 4px solid var(--sun); outline-offset: 3px; }
+button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:not(:focus-visible) { outline: none; }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
 
 .root {
   position: relative; overflow: hidden; border-radius: var(--ha-card-border-radius, 16px);
   height: var(--hh-height); min-height: 560px; font-family: var(--kid-font); color: var(--ink);
   user-select: none; -webkit-user-select: none; touch-action: manipulation; background: #2b2560;
-  container-type: inline-size;
+  /* Makes .root the containing block for the position:fixed parent button in the
+     stacked layout. container-type implied this, but only from Chrome 105 on; plain
+     layout containment does the same from Chrome 52 and needs no container query. */
+  contain: layout;
 }
-.layer { position: absolute; inset: 0; pointer-events: none; z-index: 20; }
+.layer { position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; z-index: 20; }
 .layer > * { pointer-events: auto; }
 
 /* chunky toy button */
@@ -474,7 +487,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
 .chunk:active { transform: translateY(5px); box-shadow: 0 1px 0 var(--ink); }
 
 /* themed world */
-.world { position: absolute; inset: 0; background: linear-gradient(180deg, var(--sky1), var(--sky2)); }
+.world { position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: linear-gradient(180deg, var(--sky1), var(--sky2)); }
 .world .hill { position: absolute; left: -10%; width: 120%; bottom: 0; height: 30%; }
 .decor { position: absolute; line-height: 1; filter: drop-shadow(0 3px 0 rgba(46,42,92,.25)); }
 @media (prefers-reduced-motion: no-preference) {
@@ -484,7 +497,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
 @keyframes drift { 50% { transform: translateY(-10px) rotate(4deg); } }
 
 /* ------------------------------------------------ picker */
-.picker { position: absolute; inset: 0; display: flex; flex-direction: column; background: #2b2560; }
+.picker { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; flex-direction: column; background: #2b2560; }
 .picker-top { display: flex; justify-content: center; padding: 22px 24px 0; min-height: 30px; }
 .kids { flex: 1; display: flex; gap: 22px; padding: 22px 28px 34px; align-items: stretch; justify-content: center; }
 .kid-door {
@@ -494,10 +507,10 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
   transition: transform .1s, box-shadow .1s;
 }
 .kid-door:active { transform: translateY(8px); box-shadow: 0 2px 0 var(--ink); }
-.kid-door .pet-big { position: relative; z-index: 1; font-size: clamp(110px, 14vw, 190px); line-height: 1; margin-bottom: 6px; }
+.kid-door .pet-big { position: relative; z-index: 1; font-size: 140px; font-size: clamp(110px, 14vw, 190px); line-height: 1; margin-bottom: 6px; }
 .kid-door .door-name {
   position: relative; z-index: 1; margin: 0 0 18px; padding: 4px 26px 0; background: var(--paper);
-  border: 4px solid var(--ink); border-radius: 999px; font-size: clamp(28px, 3vw, 44px); font-weight: 800; line-height: 1.2;
+  border: 4px solid var(--ink); border-radius: 999px; font-size: 34px; font-size: clamp(28px, 3vw, 44px); font-weight: 800; line-height: 1.2;
 }
 .dots { position: relative; z-index: 1; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 18px; max-width: 80%; }
 .dot { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--ink); background: var(--paper); }
@@ -509,9 +522,9 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
   position: absolute; right: 18px; bottom: 16px; z-index: 5; width: 58px; height: 58px; border-radius: 50%;
   font-size: 26px; display: grid; place-items: center; opacity: .85;
 }
-.parent-btn .ring { position: absolute; inset: -6px; border-radius: 50%; border: 5px solid var(--sun); clip-path: inset(0 100% 0 0); }
+.parent-btn .ring { position: absolute; top: -6px; right: -6px; bottom: -6px; left: -6px; border-radius: 50%; border: 5px solid var(--sun); clip-path: inset(0 100% 0 0); }
 .parent-btn.holding .ring, .parent-inline.holding .ring { animation: wipe 1s linear forwards; }
-.parent-inline .ring { position: absolute; inset: -6px; border: 5px solid var(--sun); clip-path: inset(0 100% 0 0); }
+.parent-inline .ring { position: absolute; top: -6px; right: -6px; bottom: -6px; left: -6px; border: 5px solid var(--sun); clip-path: inset(0 100% 0 0); }
 @keyframes wipe { to { clip-path: inset(0 0 0 0); } }
 
 .empty { margin: auto; text-align: center; color: #fff; font-family: var(--ui-font); max-width: 34ch; }
@@ -531,7 +544,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
 .quest-path.done { background: var(--sun); }
 
 /* ------------------------------------------------ kid screen */
-.kid { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(300px, 40%) 1fr; grid-template-rows: auto 1fr auto; grid-template-areas: "top top" "scene board" "dock board"; }
+.kid { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: minmax(300px, 40%) 1fr; grid-template-rows: auto 1fr auto; grid-template-areas: "top top" "scene board" "dock board"; }
 .kid .topbar { grid-area: top; } .kid .scene { grid-area: scene; } .kid .board { grid-area: board; } .kid .dock { grid-area: dock; }
 .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; padding: 16px 20px 0; position: relative; z-index: 2; }
 .icon-btn { width: 74px; height: 74px; font-size: 38px; display: grid; place-items: center; border-radius: 24px; }
@@ -544,9 +557,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
 .streak.off { filter: grayscale(1); opacity: .6; }
 
 .scene { position: relative; display: flex; align-items: center; justify-content: center; z-index: 1; }
-.nest { position: relative; width: min(34vw, 380px); aspect-ratio: 1; display: grid; place-items: center; }
-.nest svg.ring { position: absolute; inset: 0; transform: rotate(-90deg); }
-.nest .pet { font-size: calc(var(--pet-scale) * min(18vw, 200px)); line-height: 1; position: relative; }
+/* The square used to come from aspect-ratio (Chrome 88). The width is known here,
+   so repeating it as the height is exact rather than a fallback. */
+.nest { position: relative; width: 34vw; width: min(34vw, 380px); height: 34vw; height: min(34vw, 380px); display: grid; place-items: center; }
+.nest svg.ring { position: absolute; top: 0; right: 0; bottom: 0; left: 0; transform: rotate(-90deg); }
+.nest .pet { font-size: calc(var(--pet-scale) * 18vw); font-size: calc(var(--pet-scale) * min(18vw, 200px)); line-height: 1; position: relative; }
 @media (prefers-reduced-motion: no-preference) {
   .nest .pet { animation: bob 3s ease-in-out infinite; }
   .nest .pet.jump { animation: jump .7s cubic-bezier(.3,1.6,.5,1); }
@@ -559,8 +574,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
 @keyframes dance { 25% { transform: rotate(-10deg) translateY(-14px); } 75% { transform: rotate(10deg) translateY(-14px); } }
 @keyframes breathe { 50% { transform: scale(1.04, .97); } }
 @keyframes spin { to { transform: rotate(360deg); } }
-.crown { position: absolute; top: 4%; font-size: calc(min(18vw, 200px) * .34); z-index: 2; }
-.sparkle-orbit { position: absolute; inset: 6%; }
+.crown { position: absolute; top: 4%; font-size: calc(18vw * .34); font-size: calc(min(18vw, 200px) * .34); z-index: 2; }
+.sparkle-orbit { position: absolute; top: 6%; right: 6%; bottom: 6%; left: 6%; }
 .sparkle-orbit span { position: absolute; font-size: 34px; }
 .lvl {
   position: absolute; bottom: 2%; left: 50%; transform: translateX(-50%); min-width: 64px; height: 64px; padding: 6px 12px 0;
@@ -615,13 +630,13 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
 @keyframes pulse { 50% { transform: translateX(-50%) scale(1.08); } }
 .go.undo { background: var(--berry); }
 .go.hold { overflow: hidden; animation: none; }
-.go.hold .ring { position: absolute; inset: 0; background: rgba(255,255,255,.45); transform-origin: left; transform: scaleX(0); }
+.go.hold .ring { position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: rgba(255,255,255,.45); transform-origin: left; transform: scaleX(0); }
 .go.hold.holding .ring { transition: transform 1s linear; transform: scaleX(1); }
 
 /* family strip on the picker: what everyone did today, as pictures (no scores) */
 .kid-door.grown { flex: .7 1 0; min-width: 180px; }
-.kid-door.grown .pet-big { font-size: clamp(80px, 10vw, 140px); }
-.kid-door.grown .door-name { font-size: clamp(22px, 2.4vw, 34px); }
+.kid-door.grown .pet-big { font-size: 110px; font-size: clamp(80px, 10vw, 140px); }
+.kid-door.grown .door-name { font-size: 26px; font-size: clamp(22px, 2.4vw, 34px); }
 .family-chip {
   display: flex; align-items: center; gap: 10px; padding: 6px 18px 2px; margin-left: 14px; background: rgba(255,255,255,.95);
   border: 4px solid var(--ink); border-radius: 999px; box-shadow: 0 6px 0 var(--ink); font-size: 28px; font-weight: 800; white-space: nowrap;
@@ -654,7 +669,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
 }
 
 /* ------------------------------------------------ sub screens (shop, stickers, quest) */
-.sub { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.sub { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; flex-direction: column; }
 .sub .topbar { padding-bottom: 6px; }
 .panel {
   position: relative; z-index: 1; flex: 1; margin: 12px 24px 24px; padding: 24px; overflow-y: auto;
@@ -673,6 +688,9 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
 .reward.rich { box-shadow: 0 8px 0 var(--ink), 0 0 0 8px rgba(255,201,60,.55); }
 
 .slot-badge { aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; font-size: 62px; border: 5px solid var(--ink); background: var(--paper); box-shadow: 0 7px 0 var(--ink); position: relative; }
+/* Below Chrome 88 the badge is not a square by itself. The grid track it sits in is
+   at least 132px wide, so that height keeps it close to round. */
+@supports not (aspect-ratio: 1 / 1) { .slot-badge { height: 132px; } }
 .slot-badge.locked { background: var(--mist); border-style: dashed; box-shadow: none; }
 .slot-badge.locked .sil { filter: brightness(0); opacity: .14; }
 .slot-badge .blabel { position: absolute; bottom: -42px; left: -10px; right: -10px; text-align: center; font-family: var(--ui-font); font-size: 14px; font-weight: 700; opacity: .7; line-height: 1.15; }
@@ -688,7 +706,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
 
 /* ------------------------------------------------ overlays */
 .celebrate {
-  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
   background: rgba(46,42,92,.72); color: #fff; text-align: center;
 }
 .celebrate .hero { font-size: 200px; line-height: 1; filter: drop-shadow(0 8px 0 var(--ink)); }
@@ -704,7 +722,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
 }
 
 /* ------------------------------------------------ PIN pad */
-.pinpad { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; background: rgba(46,42,92,.86); font-family: var(--ui-font); }
+.pinpad { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 10; display: grid; place-items: center; background: rgba(46,42,92,.86); font-family: var(--ui-font); }
 .pinbox { background: var(--paper); border: 5px solid var(--ink); border-radius: 32px; padding: 26px; box-shadow: 0 10px 0 var(--ink); text-align: center; }
 .pinbox h2 { margin: 0 0 6px; font-family: var(--kid-font); font-size: 30px; }
 .pindots { display: flex; justify-content: center; gap: 12px; margin: 12px 0 18px; height: 22px; }
@@ -717,7 +735,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
 @keyframes shake { 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
 
 /* ------------------------------------------------ parents area */
-.admin { position: absolute; inset: 0; display: grid; grid-template-columns: 230px 1fr; background: #f6f3fb; font-family: var(--ui-font); user-select: text; -webkit-user-select: text; }
+.admin { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: 230px 1fr; background: #f6f3fb; font-family: var(--ui-font); user-select: text; -webkit-user-select: text; }
 .admin nav { background: var(--ink); color: #fff; padding: 20px 14px; display: flex; flex-direction: column; gap: 6px; }
 .admin nav h1 { font-family: var(--kid-font); font-size: 26px; margin: 0 8px 14px; line-height: 1.1; }
 .admin nav button { text-align: left; background: none; border: 0; border-radius: 14px; padding: 11px 14px; font-size: 17px; font-weight: 700; color: #fff; display: flex; gap: 10px; align-items: center; }
@@ -745,8 +763,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
 .stars-ctl { display: flex; align-items: center; gap: 8px; }
 .stars-ctl b { min-width: 52px; text-align: center; font-size: 18px; }
 
-.modal-bg { position: absolute; inset: 0; background: rgba(46,42,92,.6); display: grid; place-items: center; padding: 20px; font-family: var(--ui-font); user-select: text; -webkit-user-select: text; }
-.modal { width: min(640px, 100%); max-height: 100%; overflow-y: auto; background: #fff; border-radius: 26px; padding: 24px 26px; border: 4px solid var(--ink); }
+.modal-bg { position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: rgba(46,42,92,.6); display: grid; place-items: center; padding: 20px; font-family: var(--ui-font); user-select: text; -webkit-user-select: text; }
+.modal { width: 100%; max-width: 640px; max-height: 100%; overflow-y: auto; background: #fff; border-radius: 26px; padding: 24px 26px; border: 4px solid var(--ink); }
 .modal h2 { font-family: var(--kid-font); margin: 0 0 14px; font-size: 28px; }
 .field { margin-bottom: 16px; }
 .field > label, .field > .lab { display: block; font-weight: 800; margin-bottom: 6px; font-size: 15px; }
@@ -754,10 +772,12 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
 .hint { font-size: 13px; color: #6a648f; margin-top: 4px; }
 .picks { display: flex; flex-wrap: wrap; gap: 8px; }
 .picks label { position: relative; }
-.picks input { position: absolute; opacity: 0; inset: 0; }
+.picks input { position: absolute; opacity: 0; top: 0; right: 0; bottom: 0; left: 0; }
 .picks span { display: grid; place-items: center; min-width: 50px; height: 50px; padding: 0 10px; font-size: 28px; border: 2px solid #ddd6ee; border-radius: 14px; background: #fff; }
 .picks.text span { font-size: 15px; font-weight: 800; }
 .picks input:checked + span { border-color: var(--ink); background: #fff3c9; box-shadow: 0 3px 0 var(--ink); }
+.picks input:focus + span { outline: 3px solid var(--sun); }
+.picks input:focus:not(:focus-visible) + span { outline: none; }
 .picks input:focus-visible + span { outline: 3px solid var(--sun); }
 .theme-sw { width: 90px; height: 54px; border-radius: 12px; border: 2px solid #ddd6ee; display: flex; align-items: flex-end; justify-content: center; font-size: 13px !important; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.4); padding-bottom: 4px !important; }
 .toggle { display: flex; align-items: center; gap: 10px; font-weight: 700; }
@@ -768,44 +788,46 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
 .progress { height: 18px; border-radius: 999px; background: #ebe5f6; overflow: hidden; margin: 10px 0; }
 .progress i { display: block; height: 100%; background: var(--sun); }
 
-/* ------------------------------------------------ responsive */
-@container (max-width: 900px) {
-  .kid { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto; grid-template-areas: "top" "scene" "board" "dock"; }
-  .nest { width: min(58vw, 260px); }
-  .nest .pet { font-size: calc(var(--pet-scale) * 34vw); }
-  .crown { font-size: 12vw; }
-  .scene { padding: 6px 0 44px; }
-  .board { padding: 10px 16px 24px; overflow: visible; }
-  .topbar { padding: 12px 12px 0; gap: 8px; }
-  .icon-btn { width: 56px; height: 56px; font-size: 28px; border-radius: 18px; }
-  .counter { height: 56px; font-size: 30px; padding: 4px 14px 0 10px; }
-  .counter .ico { font-size: 28px; margin-top: -4px; }
-  .sticker { width: 118px; height: 128px; }
-  .sticker .emo { font-size: 58px; }
-  .slot-ico { width: 52px; height: 52px; font-size: 30px; margin-top: 24px; }
-  .bubble { min-width: 70px; height: 70px; font-size: 38px; }
-  .lvl { min-width: 50px; height: 50px; font-size: 28px; }
-  .dock { position: sticky; bottom: 0; padding: 12px; }
-  .dock button { width: 84px; height: 72px; font-size: 40px; }
-  .kid { position: absolute; overflow-y: auto; grid-template-rows: auto auto auto auto; }
-  .kids { flex-direction: column; overflow-y: auto; }
-  .kid-door.grown { min-height: 220px; }
-  .picker { overflow-y: auto; }
-  .kids { overflow: visible; flex: 0 0 auto; }
-  .feed { margin: 0 84px 18px 14px; }
-  .quest-path { max-width: 100%; gap: 6px; padding: 8px 12px; font-size: 24px; }
-  .quest-path .stone { width: 14px; height: 14px; border-width: 2px; }
-  .quest-path .goal { font-size: 30px; }
-  .parent-btn { position: fixed; }
-  .family-chip { font-size: 22px; padding: 4px 12px 0; }
-  .picker-top { flex-wrap: wrap; gap: 10px; }
-  .kid-door { min-height: 300px; max-width: none; }
-  .admin { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-  .admin nav { flex-direction: row; overflow-x: auto; padding: 10px; }
-  .admin nav h1 { display: none; }
-  .admin nav .exit { margin-top: 0; margin-left: auto; }
-  .admin main { padding: 20px 16px 60px; }
-}
+/* ------------------------------------------------ responsive
+   Driven by _watchWidth(), not by an @container query: the query needs Chrome 105,
+   and below that the whole block was skipped -- a tablet in portrait then got the
+   wide two-column layout. The class is set from the card's own width, which is
+   what the query measured too. Breakpoint: NARROW_AT. */
+.root.narrow .kid { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto; grid-template-areas: "top" "scene" "board" "dock"; }
+.root.narrow .nest { width: 58vw; width: min(58vw, 260px); height: 58vw; height: min(58vw, 260px); }
+.root.narrow .nest .pet { font-size: calc(var(--pet-scale) * 34vw); }
+.root.narrow .crown { font-size: 12vw; }
+.root.narrow .scene { padding: 6px 0 44px; }
+.root.narrow .board { padding: 10px 16px 24px; overflow: visible; }
+.root.narrow .topbar { padding: 12px 12px 0; gap: 8px; }
+.root.narrow .icon-btn { width: 56px; height: 56px; font-size: 28px; border-radius: 18px; }
+.root.narrow .counter { height: 56px; font-size: 30px; padding: 4px 14px 0 10px; }
+.root.narrow .counter .ico { font-size: 28px; margin-top: -4px; }
+.root.narrow .sticker { width: 118px; height: 128px; }
+.root.narrow .sticker .emo { font-size: 58px; }
+.root.narrow .slot-ico { width: 52px; height: 52px; font-size: 30px; margin-top: 24px; }
+.root.narrow .bubble { min-width: 70px; height: 70px; font-size: 38px; }
+.root.narrow .lvl { min-width: 50px; height: 50px; font-size: 28px; }
+.root.narrow .dock { position: sticky; bottom: 0; padding: 12px; }
+.root.narrow .dock button { width: 84px; height: 72px; font-size: 40px; }
+.root.narrow .kid { position: absolute; overflow-y: auto; grid-template-rows: auto auto auto auto; }
+.root.narrow .kids { flex-direction: column; overflow-y: auto; }
+.root.narrow .kid-door.grown { min-height: 220px; }
+.root.narrow .picker { overflow-y: auto; }
+.root.narrow .kids { overflow: visible; flex: 0 0 auto; }
+.root.narrow .feed { margin: 0 84px 18px 14px; }
+.root.narrow .quest-path { max-width: 100%; gap: 6px; padding: 8px 12px; font-size: 24px; }
+.root.narrow .quest-path .stone { width: 14px; height: 14px; border-width: 2px; }
+.root.narrow .quest-path .goal { font-size: 30px; }
+.root.narrow .parent-btn { position: fixed; }
+.root.narrow .family-chip { font-size: 22px; padding: 4px 12px 0; }
+.root.narrow .picker-top { flex-wrap: wrap; gap: 10px; }
+.root.narrow .kid-door { min-height: 300px; max-width: none; }
+.root.narrow .admin { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+.root.narrow .admin nav { flex-direction: row; overflow-x: auto; padding: 10px; }
+.root.narrow .admin nav h1 { display: none; }
+.root.narrow .admin nav .exit { margin-top: 0; margin-left: auto; }
+.root.narrow .admin main { padding: 20px 16px 60px; }
 `;
 
 /* ------------------------------------------------------------------ card */
@@ -833,6 +855,7 @@ class HelferheldenCard extends HTMLElement {
   connectedCallback() {
     if (this._config) ensureFonts(this._config.font_base || DEFAULT_FONT_BASE);
     if (!this.shadowRoot) this._build();
+    this._watchWidth();
     if (this._hass && !this._subscribed) this._subscribe();
     this._armIdle();
   }
@@ -841,6 +864,34 @@ class HelferheldenCard extends HTMLElement {
     if (this._unsub) Promise.resolve(this._unsub).then((u) => typeof u === "function" && u()).catch(() => {});
     this._unsub = null; this._subscribed = false;
     clearTimeout(this._idleT); clearTimeout(this._retryT);
+    if (this._widthOff) { this._widthOff(); this._widthOff = null; }
+  }
+
+  /** Keep `.narrow` on .root in step with the card's own width.
+   *
+   * This replaces the `@container` query the stacked layout used to live in. A
+   * ResizeObserver measures the same box the query did -- the card, not the viewport --
+   * and works from Chrome 64 instead of 105. Idempotent, so reconnecting re-arms it.
+   */
+  _watchWidth() {
+    if (this._widthOff) return;
+    const apply = () => {
+      const w = this._root.clientWidth;
+      if (w) this._root.classList.toggle("narrow", w <= NARROW_AT);
+    };
+    apply();
+    if (typeof ResizeObserver === "function") {
+      const ro = new ResizeObserver(apply);
+      ro.observe(this._root);
+      this._widthOff = () => ro.disconnect();
+      return;
+    }
+    // Without ResizeObserver the window is the only signal left. The card fills its
+    // dashboard column, so its width tracks the window's; the timeout takes the first
+    // measurement, which cannot happen before the element has a layout.
+    const t = setTimeout(apply, 0);
+    window.addEventListener("resize", apply);
+    this._widthOff = () => { clearTimeout(t); window.removeEventListener("resize", apply); };
   }
 
   _build() {
@@ -1308,7 +1359,8 @@ class HelferheldenCard extends HTMLElement {
         <span class="door-name">${esc(c.name)}</span>
       </button>`;
     }).join("");
-    const byId = Object.fromEntries(s.children.map((c) => [c.id, c]));
+    // Not Object.fromEntries: that needs Chrome 73 and esbuild adds no polyfill.
+    const byId = s.children.reduce((acc, c) => { acc[c.id] = c; return acc; }, {});
     const chips = (fam.feed || []).map((f) => byId[f.child_id]
       ? `<span class="fchip ${f.status === "pending" ? "pending" : ""}" title="${esc(byId[f.child_id].name)}: ${esc(f.title)}"><span class="who">${this._petEmoji(byId[f.child_id])}</span>${esc(f.icon)}</span>` : "").join("");
     const feed = s.children.length > 1
